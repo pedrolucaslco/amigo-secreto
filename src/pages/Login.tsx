@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import PasswordInput from '../components/PasswordInput'
 
 export default function Login() {
   const nav = useNavigate()
@@ -63,8 +64,7 @@ export default function Login() {
         </label>
         <label>
           Senha
-          <input
-            type="password"
+          <PasswordInput
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

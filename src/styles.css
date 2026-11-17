@@ -118,6 +118,14 @@ input {
   min-height: 48px; padding: 0 14px; border: 1px solid var(--border); border-radius: 14px;
   background: var(--bg); color: var(--fg); font-size: 16px; font-family: inherit;
 }
+.pw-wrap { position: relative; display: flex; }
+.pw-wrap input { width: 100%; padding-right: 52px; }
+.pw-toggle {
+  position: absolute; right: 0; top: 0; width: 48px; height: 48px; border: 0; background: none;
+  color: var(--muted); display: grid; place-items: center; cursor: pointer;
+}
+.pw-toggle svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pw-toggle[aria-pressed='true'] { color: var(--accent); }
 input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 
 .btn {
