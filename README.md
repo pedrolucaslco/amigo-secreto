@@ -30,6 +30,10 @@ npm run dev            # http://localhost:5173/amigo-secreto/
 
 O `base` do Vite (`/amigo-secreto/`) precisa coincidir com o nome do repositório.
 
+## Esqueci a senha
+
+Não há reset por email. O admin abre o Painel, toca em **Redefinir senha** no card da pessoa, copia a senha temporária e a envia em privado. A pessoa entra e define uma nova na aba **Conta**. Requer a função `admin_reset_password` do `schema.sql` no banco.
+
 ## Dados de teste
 
 ```bash

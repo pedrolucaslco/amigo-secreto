@@ -5,12 +5,41 @@ import { exportXlsx } from '../lib/exportXlsx'
 type DrawRow = { giver_id: string; receiver_id: string }
 type View = 'painel' | 'sorteio' | 'planilha'
 
+// sem caracteres ambíguos (0/O, 1/l/I)
+const ALFABETO = 'abcdefghjkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ23456789'
+function gerarSenha(len = 8) {
+  const buf = new Uint32Array(len)
+  crypto.getRandomValues(buf)
+  return Array.from(buf, (n) => ALFABETO[n % ALFABETO.length]).join('')
+}
+
+async function copiar(texto: string) {
+  try {
+    await navigator.clipboard.writeText(texto)
+    return true
+  } catch {
+    // fallback para HTTP/sem permissão
+    const ta = document.createElement('textarea')
+    ta.value = texto
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(ta)
+    return ok
+  }
+}
+
 export default function Admin({ view }: { view: View }) {
   const [people, setPeople] = useState<Profile[]>([])
   const [books, setBooks] = useState<Book[]>([])
   const [draw, setDraw] = useState<DrawRow[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [temp, setTemp] = useState<{ id: string; password: string } | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [resetError, setResetError] = useState('')
 
   const load = useCallback(async () => {
     const [p, b, d] = await Promise.all([
@@ -55,6 +84,19 @@ export default function Admin({ view }: { view: View }) {
     load()
   }
 
+  async function redefinirSenha(p: Profile) {
+    if (!confirm(`Gerar uma senha temporária para ${p.name}? A senha atual deixa de funcionar.`)) return
+    setResetError('')
+    setCopied(false)
+    const password = gerarSenha()
+    const { error } = await supabase.rpc('admin_reset_password', { p_user_id: p.id, p_password: password })
+    if (error) {
+      setTemp(null)
+      return setResetError(`${p.name}: ${error.message}`)
+    }
+    setTemp({ id: p.id, password })
+  }
+
   if (loading) return <p className="center">Carregando…</p>
 
   return (
@@ -69,6 +111,7 @@ export default function Admin({ view }: { view: View }) {
           <div className="row" style={{ marginBottom: 12 }}>
             <button className="btn secondary small" onClick={load}>Atualizar</button>
           </div>
+          {resetError && <p className="error" role="alert" style={{ marginBottom: 12 }}>{resetError}</p>}
           {people.map((p) => {
             const mine = books.filter((b) => b.user_id === p.id)
             return (
@@ -93,6 +136,25 @@ export default function Admin({ view }: { view: View }) {
                       </li>
                     ))}
                   </ul>
+                )}
+                {temp?.id === p.id ? (
+                  <div className="temp-pass">
+                    <span>
+                      <span className="muted">Senha temporária</span>
+                      <br />
+                      <code>{temp.password}</code>
+                    </span>
+                    <button
+                      className="btn secondary small"
+                      onClick={async () => setCopied(await copiar(temp.password))}
+                    >
+                      {copied ? 'Copiado ✓' : 'Copiar'}
+                    </button>
+                  </div>
+                ) : (
+                  <button className="link-btn" onClick={() => redefinirSenha(p)}>
+                    Redefinir senha
+                  </button>
                 )}
               </div>
             )

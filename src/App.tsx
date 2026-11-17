@@ -7,10 +7,12 @@ import Login from './pages/Login'
 import Books from './pages/Books'
 import Result from './pages/Result'
 import Admin from './pages/Admin'
+import Account from './pages/Account'
 
 const participantTabs: TabDef[] = [
   { to: '/livros', label: 'Livros', icon: icons.books },
   { to: '/resultado', label: 'Meu amigo', icon: icons.gift },
+  { to: '/conta', label: 'Conta', icon: icons.user },
 ]
 const adminTabs: TabDef[] = [
   { to: '/admin', label: 'Painel', icon: icons.panel, end: true },
@@ -21,6 +23,7 @@ const adminTabs: TabDef[] = [
 const titles: Record<string, string> = {
   '/livros': 'Meus livros',
   '/resultado': 'Meu amigo secreto',
+  '/conta': 'Conta',
   '/admin': 'Painel',
   '/admin/sorteio': 'Sorteio',
   '/admin/planilha': 'Planilha',
@@ -56,6 +59,7 @@ export default function App() {
           <Route path="/" element={<Login />} />
           <Route path="/livros" element={<Protected><Books /></Protected>} />
           <Route path="/resultado" element={<Protected><Result /></Protected>} />
+          <Route path="/conta" element={<Protected><Account /></Protected>} />
           <Route path="/admin" element={<Protected admin><Admin view="painel" /></Protected>} />
           <Route path="/admin/sorteio" element={<Protected admin><Admin view="sorteio" /></Protected>} />
           <Route path="/admin/planilha" element={<Protected admin><Admin view="planilha" /></Protected>} />

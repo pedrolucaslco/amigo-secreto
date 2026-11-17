@@ -162,6 +162,35 @@ end $$;
 revoke all on function public.reset_draw() from public, anon;
 grant execute on function public.reset_draw() to authenticated;
 
+-- ========== Reset de senha pelo admin (sem email) ==========
+-- O admin define uma senha temporária e a repassa ao participante, que depois
+-- a troca na aba "Conta". Também encerra as sessões antigas da pessoa.
+create or replace function public.admin_reset_password(p_user_id uuid, p_password text)
+returns void language plpgsql security definer set search_path = public, extensions, auth as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Apenas o admin pode redefinir senhas';
+  end if;
+  if p_user_id = auth.uid() then
+    raise exception 'Use a opção de alterar senha da sua própria conta';
+  end if;
+  if char_length(coalesce(p_password, '')) < 6 then
+    raise exception 'A senha precisa ter pelo menos 6 caracteres';
+  end if;
+
+  update auth.users
+     set encrypted_password = crypt(p_password, gen_salt('bf')),
+         updated_at = now()
+   where id = p_user_id;
+  if not found then
+    raise exception 'Usuário não encontrado';
+  end if;
+
+  delete from auth.sessions where user_id = p_user_id;
+end $$;
+revoke all on function public.admin_reset_password(uuid, text) from public, anon;
+grant execute on function public.admin_reset_password(uuid, text) to authenticated;
+
 -- ========== Setup manual do admin ==========
 -- 1) Crie seu usuário normalmente pelo site (ou Auth > Users no painel).
 -- 2) Rode:  update public.profiles set is_admin = true where email = 'SEU_EMAIL';
