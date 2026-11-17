@@ -10,6 +10,7 @@ export type Profile = {
   name: string
   email: string
   is_admin: boolean
+  surprise: boolean
 }
 
 export type Book = {

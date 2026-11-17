@@ -10,7 +10,8 @@ export function exportXlsx(people: Profile[], books: Book[], draw: { giver_id: s
       Nome: p.name,
       Email: p.email,
       'Qtd. livros': mine.length,
-      Status: mine.length === 0 ? 'FALTA CADASTRAR' : 'OK',
+      'Livro surpresa': p.surprise ? 'Sim' : 'Não',
+      Status: mine.length === 0 && !p.surprise ? 'FALTA CADASTRAR' : 'OK',
     }
   })
 

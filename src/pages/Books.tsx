@@ -4,8 +4,9 @@ import { useAuth } from '../lib/auth'
 import BookCard from '../components/BookCard'
 
 export default function Books() {
-  const { session } = useAuth()
+  const { session, profile, refreshProfile } = useAuth()
   const uid = session!.user.id
+  const surprise = Boolean(profile?.surprise)
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -41,6 +42,13 @@ export default function Books() {
     load()
   }
 
+  async function toggleSurprise(value: boolean) {
+    setError('')
+    const { error } = await supabase.rpc('set_surprise', { p_value: value })
+    if (error) return setError(error.message)
+    await refreshProfile()
+  }
+
   async function remove(b: Book) {
     if (!confirm(`Remover "${b.title}"?`)) return
     const { error } = await supabase.from('books').delete().eq('id', b.id)
@@ -62,11 +70,29 @@ export default function Books() {
       {books.map((b) => (
         <BookCard key={b.id} book={b} onRemove={() => remove(b)} />
       ))}
-      {books.length === 0 && (
+      {books.length === 0 && !surprise && (
         <p className="muted" style={{ margin: '8px 0 16px' }}>
           Você ainda não sugeriu nenhum livro.
         </p>
       )}
+
+      <label className={'card surprise' + (surprise ? ' on' : '')}>
+        <span>
+          <strong>🎁 Quero um livro surpresa</strong>
+          <span className="muted">
+            Quem te tirou escolhe o livro. Você ainda pode listar livros se quiser.
+          </span>
+        </span>
+        <span className="switch">
+          <input
+            type="checkbox"
+            checked={surprise}
+            onChange={(e) => toggleSurprise(e.target.checked)}
+            aria-label="Quero um livro surpresa"
+          />
+          <span className="knob" aria-hidden="true" />
+        </span>
+      </label>
 
       {error && !open && <p className="error" role="alert">{error}</p>}
 

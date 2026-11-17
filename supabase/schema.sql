@@ -7,6 +7,7 @@ create table public.profiles (
   name text not null,
   email text not null,
   is_admin boolean not null default false,
+  surprise boolean not null default false, -- aceita livro surpresa
   created_at timestamptz not null default now()
 );
 
@@ -128,7 +129,8 @@ begin
 
   select coalesce(jsonb_agg(p.name), '[]'::jsonb) into missing
   from public.profiles p
-  where not p.is_admin and not exists (select 1 from public.books b where b.user_id = p.id);
+  where not p.is_admin and not p.surprise
+    and not exists (select 1 from public.books b where b.user_id = p.id);
 
   if jsonb_array_length(missing) > 0 and not p_force then
     return jsonb_build_object('done', false, 'missing_books', missing);
@@ -190,6 +192,41 @@ begin
 end $$;
 revoke all on function public.admin_reset_password(uuid, text) from public, anon;
 grant execute on function public.admin_reset_password(uuid, text) to authenticated;
+
+-- ========== Apagar participante (admin) ==========
+-- Remove a conta de login e, em cascata, perfil, livros e sorteio dela.
+-- Bloqueado após o sorteio: apagar alguém quebraria o ciclo (use "Resetar sorteio" antes).
+create or replace function public.admin_delete_user(p_user_id uuid)
+returns void language plpgsql security definer set search_path = public, auth as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Apenas o admin pode apagar participantes';
+  end if;
+  if p_user_id = auth.uid() or exists (select 1 from public.profiles where id = p_user_id and is_admin) then
+    raise exception 'Contas de admin não podem ser apagadas por aqui';
+  end if;
+  if (select draw_done from public.settings where id = 1) then
+    raise exception 'O sorteio já foi realizado. Resete o sorteio antes de apagar participantes';
+  end if;
+
+  delete from auth.users where id = p_user_id;
+  if not found then
+    raise exception 'Usuário não encontrado';
+  end if;
+end $$;
+revoke all on function public.admin_delete_user(uuid) from public, anon;
+grant execute on function public.admin_delete_user(uuid) to authenticated;
+
+-- ========== Livro surpresa ==========
+-- RPC em vez de policy de UPDATE em profiles: uma policy de update deixaria
+-- o usuário alterar is_admin. Aqui só a coluna surprise da própria linha muda.
+create or replace function public.set_surprise(p_value boolean)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update public.profiles set surprise = coalesce(p_value, false) where id = auth.uid();
+end $$;
+revoke all on function public.set_surprise(boolean) from public, anon;
+grant execute on function public.set_surprise(boolean) to authenticated;
 
 -- ========== Setup manual do admin ==========
 -- 1) Crie seu usuário normalmente pelo site (ou Auth > Users no painel).

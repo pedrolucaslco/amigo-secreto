@@ -9,6 +9,7 @@ export default function Result() {
   const [loading, setLoading] = useState(true)
   const [friend, setFriend] = useState<string | null>(null)
   const [books, setBooks] = useState<Book[]>([])
+  const [surprise, setSurprise] = useState(false)
   const [revealed, setRevealed] = useState(false)
 
   useEffect(() => {
@@ -20,10 +21,11 @@ export default function Result() {
         .maybeSingle()
       if (d) {
         const [p, b] = await Promise.all([
-          supabase.from('profiles').select('name').eq('id', d.receiver_id).single(),
+          supabase.from('profiles').select('name, surprise').eq('id', d.receiver_id).single(),
           supabase.from('books').select('*').eq('user_id', d.receiver_id).order('id'),
         ])
         setFriend(p.data?.name ?? null)
+        setSurprise(Boolean(p.data?.surprise))
         setBooks((b.data as Book[]) ?? [])
       }
       setLoading(false)
@@ -62,9 +64,20 @@ export default function Result() {
 
       {revealed && (
         <>
-          <h3 style={{ margin: '8px 0 12px' }}>Sugestões de livros</h3>
-          {books.map((b) => <BookCard key={b.id} book={b} />)}
-          {books.length === 0 && <p className="muted">Esta pessoa não cadastrou livros.</p>}
+          {surprise && (
+            <div className="surprise-card">
+              🎁 {friend} aceita um livro surpresa!
+            </div>
+          )}
+          {books.length > 0 && (
+            <>
+              <h3 style={{ margin: '8px 0 12px' }}>Sugestões de livros</h3>
+              {books.map((b) => <BookCard key={b.id} book={b} />)}
+            </>
+          )}
+          {books.length === 0 && !surprise && (
+            <p className="muted">Esta pessoa não cadastrou livros.</p>
+          )}
           <button className="link-btn" onClick={() => setRevealed(false)}>Esconder</button>
         </>
       )}

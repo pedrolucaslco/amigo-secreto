@@ -59,7 +59,7 @@ export default function Admin({ view }: { view: View }) {
 
   const name = (id: string) => people.find((p) => p.id === id)?.name ?? '?'
   const done = draw.length > 0
-  const missing = people.filter((p) => !books.some((b) => b.user_id === p.id))
+  const missing = people.filter((p) => !p.surprise && !books.some((b) => b.user_id === p.id))
 
   async function sortear() {
     setMessage('')
@@ -97,6 +97,15 @@ export default function Admin({ view }: { view: View }) {
     setTemp({ id: p.id, password })
   }
 
+  async function apagar(p: Profile) {
+    if (!confirm(`Apagar ${p.name} (${p.email})? A conta, os livros e o cadastro dela serão removidos. Não dá para desfazer.`)) return
+    setResetError('')
+    const { error } = await supabase.rpc('admin_delete_user', { p_user_id: p.id })
+    if (error) return setResetError(`${p.name}: ${error.message}`)
+    if (temp?.id === p.id) setTemp(null)
+    load()
+  }
+
   if (loading) return <p className="center">Carregando…</p>
 
   return (
@@ -121,11 +130,14 @@ export default function Admin({ view }: { view: View }) {
                     <strong>{p.name}</strong>
                     <div className="muted">{p.email}</div>
                   </div>
-                  {mine.length === 0 ? (
-                    <span className="badge warn">falta cadastrar</span>
-                  ) : (
-                    <span className="badge ok">{mine.length} {mine.length === 1 ? 'livro' : 'livros'}</span>
-                  )}
+                  <span className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
+                    {p.surprise && <span className="badge ok">🎁 surpresa</span>}
+                    {mine.length > 0 ? (
+                      <span className="badge ok">{mine.length} {mine.length === 1 ? 'livro' : 'livros'}</span>
+                    ) : (
+                      !p.surprise && <span className="badge warn">falta cadastrar</span>
+                    )}
+                  </span>
                 </div>
                 {mine.length > 0 && (
                   <ul>
@@ -152,9 +164,14 @@ export default function Admin({ view }: { view: View }) {
                     </button>
                   </div>
                 ) : (
-                  <button className="link-btn" onClick={() => redefinirSenha(p)}>
-                    Redefinir senha
-                  </button>
+                  <div className="row" style={{ justifyContent: 'space-between' }}>
+                    <button className="link-btn" onClick={() => redefinirSenha(p)}>
+                      Redefinir senha
+                    </button>
+                    <button className="link-btn danger-text" onClick={() => apagar(p)}>
+                      Apagar participante
+                    </button>
+                  </div>
                 )}
               </div>
             )
